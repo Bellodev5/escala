@@ -437,11 +437,12 @@ body {
   gap: 7px;
   padding: 5px 7px;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: grab;
   transition: background var(--transition);
   margin-bottom: 2px;
 }
 .summary-item:hover { background: var(--luz-dim); }
+.summary-item:active { cursor: grabbing; }
 .summary-item.active { background: rgba(255,200,87,0.12); }
 .summary-item.has-conflict .si-name { color: var(--red); }
 
@@ -480,6 +481,26 @@ body {
   background: var(--red-dim);
   color: var(--red);
 }
+/* Líder no resumo da Interseção — verde */
+.summary-item.si-leader .si-av  { background: rgba(92,230,92,0.2); color: var(--green); }
+.summary-item.si-leader .si-name { color: var(--green); opacity: 0.9; }
+.summary-item.si-leader .si-badge { background: rgba(92,230,92,0.18); color: var(--green); }
+/* Obreiro com 0 ocorrências — levemente esmaecido */
+.summary-item.si-zero { opacity: 0.45; }
+.summary-item.si-zero:hover { opacity: 0.85; }
+/* Separador entre escalados / não escalados */
+.summary-divider {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--azul2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 6px 7px 3px;
+  opacity: 0.45;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+.summary-divider:first-child { border-top: none; margin-top: 0; }
 
 /* ═══════════════════════════════════════════════════════════════
    FOOTER
@@ -504,6 +525,17 @@ body {
   transition: all 0.3s;
 }
 #status-msg.flash { color: var(--green); }
+/* Indicador de conexão ao servidor */
+#conn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--azul2);
+  flex-shrink: 0;
+  transition: background 0.4s;
+  title: 'Status de conexão';
+}
+#conn-dot.online  { background: var(--green); box-shadow: 0 0 5px rgba(92,230,92,0.5); }
+#conn-dot.offline { background: rgba(255,107,107,0.6); }
 
 /* ═══════════════════════════════════════════════════════════════
    TOAST
@@ -537,6 +569,959 @@ body {
    UTILITY
 ═══════════════════════════════════════════════════════════════ */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB BAR  ← NOVA SEÇÃO
+═══════════════════════════════════════════════════════════════ */
+#tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 16px 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab-btn {
+  padding: 6px 16px 7px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--bg3);
+  color: var(--claro);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+.tab-btn:hover { opacity: 0.8; border-color: var(--border-med); }
+.tab-btn.active {
+  background: var(--bg);
+  border-color: var(--border-med);
+  border-bottom-color: var(--bg);
+  color: var(--luz);
+  opacity: 1;
+  position: relative;
+  bottom: -1px;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   POOL DE OBREIROS  ← NOVA SEÇÃO
+═══════════════════════════════════════════════════════════════ */
+#pool-section {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+}
+#pool-header {
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: var(--bg3);
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+#pool-header:hover { background: var(--azul); }
+#pool-header h3 {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--claro);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pool-count-badge {
+  background: var(--azul);
+  color: var(--luz);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+#pool-toggle-icon {
+  font-size: 0.55rem;
+  color: var(--azul2);
+  transition: transform var(--transition);
+  transform: rotate(0deg);
+}
+#pool-toggle-icon.collapsed { transform: rotate(180deg); }
+#pool-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  flex: 1;
+  padding: 6px 8px;
+}
+#pool-body.hidden { display: none; }
+#pool-textarea {
+  width: 100%;
+  height: 52px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.63rem;
+  color: var(--branco);
+  resize: none;
+  outline: none;
+  flex-shrink: 0;
+}
+#pool-textarea:focus { border-color: var(--luz); }
+#pool-textarea::placeholder { color: var(--azul2); opacity: 0.7; }
+#pool-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+#pool-add-btn {
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--luz-dim);
+  border: 1px solid var(--border-med);
+  border-radius: 20px;
+  color: var(--luz);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all var(--transition);
+}
+#pool-add-btn:hover { background: var(--azul); }
+#pool-clear-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--claro);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all var(--transition);
+}
+#pool-clear-btn:hover { border-color: var(--red); color: var(--red); opacity: 1; }
+#pool-cards {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+#pool-cards::-webkit-scrollbar { width: 4px; }
+#pool-cards::-webkit-scrollbar-track { background: transparent; }
+#pool-cards::-webkit-scrollbar-thumb { background: var(--azul); border-radius: 2px; }
+#pool-empty {
+  font-size: 0.6rem;
+  color: var(--azul2);
+  text-align: center;
+  padding: 8px 4px;
+  opacity: 0.6;
+  font-style: italic;
+}
+/* Pool cards têm avatar amarelo para diferenciar */
+.pool-card .avatar {
+  background: var(--yellow);
+  color: var(--bg);
+}
+.pool-card { cursor: copy; }
+
+/* ═══════════════════════════════════════════════════════════════
+   INTERSEÇÃO — LISTA VERTICAL  ← nova
+═══════════════════════════════════════════════════════════════ */
+#inter-list {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding: 10px;
+  align-items: flex-start;
+}
+.inter-day-col {
+  flex: 1;
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.inter-day-header {
+  background: var(--bg3);
+  border: 1px solid var(--border-med);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--luz);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.inter-day-sep {
+  width: 1px;
+  background: var(--border);
+  align-self: stretch;
+  margin: 10px 0;
+  flex-shrink: 0;
+}
+.inter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(75,132,149,0.06);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  min-height: 46px;
+  transition: background var(--transition), border-color var(--transition);
+}
+.inter-row.drag-over {
+  background: var(--luz-dim);
+  border-color: var(--luz);
+  box-shadow: inset 0 0 0 1px rgba(115,234,254,0.25);
+}
+.inter-row.inter-has-conflict {
+  border-color: rgba(255,107,107,0.5);
+  background: rgba(255,107,107,0.04);
+}
+.inter-time {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--luz);
+  letter-spacing: 0.04em;
+  min-width: 46px;
+  padding-top: 3px;
+  flex-shrink: 0;
+}
+.inter-cards {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.inter-inp-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.inter-inp {
+  background: rgba(115,234,254,0.05);
+  border: 1px dashed rgba(115,234,254,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.62rem;
+  color: var(--claro);
+  width: 110px;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition), width var(--transition);
+}
+.inter-inp:focus {
+  border-color: var(--luz);
+  border-style: solid;
+  background: rgba(115,234,254,0.08);
+  width: 150px;
+}
+.inter-inp::placeholder { color: var(--azul2); font-size: 0.6rem; }
+.inter-inp-btn {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-med);
+  background: var(--luz-dim);
+  color: var(--luz);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0;
+}
+.inter-inp-btn:hover { background: var(--azul); border-color: var(--luz); }
+/* card pequeno dentro da Interseção */
+.inter-card {
+  background: linear-gradient(135deg, var(--azul), #2d6a80);
+  border: 1px solid var(--border-med);
+  border-radius: 20px;
+  padding: 3px 8px 3px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: all var(--transition);
+  position: relative;
+}
+.inter-card:hover { border-color: var(--luz); }
+.inter-card.dragging { opacity: 0.25; }
+.inter-card.inter-conflict-card {
+  background: linear-gradient(135deg, #3d1414, #5a2020);
+  border-color: var(--red);
+}
+/* Líder da Interseção — verde (só quando sem conflito) */
+.inter-card.inter-leader-card {
+  background: linear-gradient(135deg, #1a3d1a, #204d22);
+  border-color: var(--green);
+}
+.inter-card.highlighted-card {
+  border-color: var(--yellow);
+  background: linear-gradient(135deg, #3d3014, #5a4a20);
+}
+.inter-card.search-dim { opacity: 0.2; }
+.inter-card .avatar {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--luz);
+  color: var(--bg);
+  font-size: 0.45rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.inter-card.inter-conflict-card .avatar { background: var(--red); }
+.inter-card.inter-leader-card .avatar   { background: var(--green); color: var(--bg); }
+.inter-card.highlighted-card .avatar    { background: var(--yellow); }
+/* Divisor de período (Manhã / Tarde) */
+.inter-period-divider {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--azul2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 4px 3px;
+  opacity: 0.55;
+  border-top: 1px solid var(--border);
+  margin-top: 3px;
+}
+.inter-period-divider:first-child { border-top: none; margin-top: 0; }
+.inter-card .card-name {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--branco);
+  white-space: nowrap;
+}
+.inter-card .btn-del {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: none;
+  background: rgba(255,107,107,0.15);
+  color: var(--red);
+  font-size: 0.55rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition);
+  padding: 0;
+  line-height: 1;
+}
+.inter-card:hover .btn-del { opacity: 1; }
+.inter-card .btn-del:hover { background: rgba(255,107,107,0.35); }
+
+/* ═══════════════════════════════════════════════════════════════
+   WORKER PANEL — painel de visão cruzada ← NOVO
+═══════════════════════════════════════════════════════════════ */
+#worker-panel-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 300;
+  display: none;
+  cursor: pointer;
+}
+#worker-panel-overlay.show { display: block; }
+#worker-panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 290px;
+  background: var(--bg2);
+  border-left: 1.5px solid var(--border-med);
+  z-index: 301;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+}
+#worker-panel.show { transform: translateX(0); }
+.wp-header {
+  padding: 14px 12px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.wp-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--azul);
+  color: var(--luz);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-med);
+}
+.wp-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--branco);
+  flex: 1;
+  line-height: 1.4;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wp-subtitle {
+  font-size: 0.58rem;
+  color: var(--claro);
+  opacity: 0.45;
+  margin-top: 1px;
+}
+.wp-close {
+  width: 22px; height: 22px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--claro);
+  font-size: 0.62rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+  opacity: 0.6;
+}
+.wp-close:hover { border-color: var(--red); color: var(--red); opacity: 1; }
+.wp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wp-body::-webkit-scrollbar { width: 4px; }
+.wp-body::-webkit-scrollbar-thumb { background: var(--azul); border-radius: 2px; }
+.wp-section {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.wp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.wp-section-title {
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: var(--claro);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+}
+.wp-count-badge {
+  background: var(--azul);
+  color: var(--luz);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.wp-count-badge.zero { background: rgba(75,132,149,0.2); color: var(--azul2); }
+.wp-slot-list { display: flex; flex-direction: column; gap: 2px; }
+.wp-slot-item {
+  font-size: 0.61rem;
+  color: var(--claro);
+  opacity: 0.72;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+.wp-slot-item::before { content: '›'; color: var(--luz); opacity: 0.5; flex-shrink: 0; }
+.wp-slot-item:last-child { border-bottom: none; }
+.wp-none { font-size: 0.6rem; color: var(--azul2); opacity: 0.5; font-style: italic; padding: 2px 0; }
+
+/* Sidebar tab chip — label contextual ← NOVO */
+.sidebar-tab-chip {
+  display: inline-block;
+  background: var(--azul);
+  color: var(--luz);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  vertical-align: middle;
+  margin-left: 4px;
+  letter-spacing: 0.03em;
+}
+
+/* Input error flash ← NOVO */
+.inter-inp.inp-error {
+  border-color: var(--red) !important;
+  border-style: solid !important;
+  background: rgba(255,107,107,0.08) !important;
+  animation: shake 0.3s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIVE PANEL — PAINEL DE ESCALAS AO VIVO
+═══════════════════════════════════════════════════════════════ */
+#lp-overlay {
+  position: fixed; inset: 0;
+  background: #050e14;
+  z-index: 600;
+  display: none;
+  flex-direction: column;
+  font-family: 'Montserrat', sans-serif;
+}
+#lp-overlay.show { display: flex; }
+
+/* Top bar */
+#lp-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 56px;
+  background: rgba(18,36,48,0.95);
+  border-bottom: 1px solid rgba(115,234,254,0.15);
+  flex-shrink: 0;
+}
+#lp-logo {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--luz);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+#lp-logo span { color: var(--claro); opacity: 0.4; font-weight: 400; }
+#lp-clock {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--branco);
+  letter-spacing: 0.06em;
+  min-width: 80px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#lp-date-str {
+  font-size: 0.6rem;
+  color: var(--claro);
+  opacity: 0.4;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+.lp-sep { flex: 1; }
+/* Filter groups */
+.lp-filter-group {
+  display: flex;
+  gap: 3px;
+  background: rgba(115,234,254,0.04);
+  border: 1px solid rgba(115,234,254,0.1);
+  border-radius: 20px;
+  padding: 3px;
+}
+.lp-filter-btn {
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--claro);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.45;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.lp-filter-btn:hover { opacity: 0.8; }
+.lp-filter-btn.active {
+  background: var(--azul);
+  color: var(--luz);
+  opacity: 1;
+}
+.lp-icon-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(115,234,254,0.15);
+  background: transparent;
+  color: var(--claro);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.lp-icon-btn:hover { opacity: 1; border-color: var(--luz); color: var(--luz); }
+
+/* Body — 3 columns */
+#lp-body {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── FINALIZADAS (esquerda) ── */
+#lp-done-col {
+  width: 20%;
+  min-width: 180px;
+  border-right: 1px solid rgba(115,234,254,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lp-col-title {
+  padding: 10px 14px 8px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--azul2);
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(115,234,254,0.06);
+}
+#lp-done-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+#lp-done-list::-webkit-scrollbar { width: 3px; }
+#lp-done-list::-webkit-scrollbar-thumb { background: rgba(115,234,254,0.15); }
+.lp-done-item {
+  background: rgba(75,132,149,0.05);
+  border: 1px solid rgba(115,234,254,0.06);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.lp-done-item:hover { opacity: 0.65; }
+.lp-done-check {
+  color: var(--green);
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.lp-done-info { flex: 1; min-width: 0; }
+.lp-done-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--claro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lp-done-count {
+  font-size: 0.52rem;
+  color: var(--azul2);
+  margin-top: 1px;
+}
+
+/* ── AGORA (centro) ── */
+#lp-now-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+/* Background glow */
+#lp-now-col::before {
+  content: '';
+  position: absolute;
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(115,234,254,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  animation: lp-pulse 3s ease-in-out infinite;
+}
+@keyframes lp-pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.12); opacity: 0.7; }
+}
+.lp-now-empty {
+  text-align: center;
+  color: var(--azul2);
+}
+.lp-now-empty .lp-big-msg {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--azul);
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+.lp-now-empty .lp-sub-msg {
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+.lp-now-card {
+  width: 100%;
+  max-width: 560px;
+  background: rgba(18,36,48,0.9);
+  border: 1.5px solid rgba(115,234,254,0.3);
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 0 60px rgba(115,234,254,0.08), 0 0 20px rgba(115,234,254,0.04);
+  position: relative;
+  z-index: 1;
+  animation: lp-card-in 0.4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes lp-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.lp-now-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(115,234,254,0.12);
+  border: 1px solid rgba(115,234,254,0.3);
+  color: var(--luz);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+.lp-now-tag::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--luz);
+  animation: lp-blink 1.2s ease-in-out infinite;
+}
+@keyframes lp-blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.2; }
+}
+.lp-now-time {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--branco);
+  letter-spacing: -0.01em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.lp-now-source {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--luz);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin-bottom: 18px;
+}
+.lp-now-zones { display: flex; flex-direction: column; gap: 10px; }
+.lp-now-zone-row { display: flex; gap: 8px; align-items: flex-start; }
+.lp-now-zone-lbl {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--azul2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  min-width: 80px;
+  padding-top: 3px;
+  flex-shrink: 0;
+}
+.lp-now-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.lp-chip {
+  background: rgba(75,132,149,0.25);
+  border: 1px solid rgba(115,234,254,0.18);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--claro);
+  white-space: nowrap;
+}
+.lp-chip.lp-chip-leader {
+  background: rgba(92,230,92,0.12);
+  border-color: rgba(92,230,92,0.3);
+  color: var(--green);
+}
+.lp-now-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(115,234,254,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lp-now-count {
+  font-size: 0.6rem;
+  color: var(--azul2);
+}
+.lp-now-phrase {
+  font-size: 0.58rem;
+  color: var(--azul2);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* ── PRÓXIMAS (direita) ── */
+#lp-next-col {
+  width: 26%;
+  min-width: 200px;
+  border-left: 1px solid rgba(115,234,254,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#lp-next-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#lp-next-list::-webkit-scrollbar { width: 3px; }
+#lp-next-list::-webkit-scrollbar-thumb { background: rgba(115,234,254,0.15); }
+.lp-next-item {
+  background: rgba(75,132,149,0.07);
+  border: 1px solid rgba(115,234,254,0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+  animation: lp-card-in 0.3s ease;
+}
+.lp-next-item:first-child {
+  border-color: rgba(115,234,254,0.22);
+  background: rgba(75,132,149,0.12);
+}
+.lp-next-item:hover { border-color: rgba(115,234,254,0.2); }
+.lp-next-tag {
+  font-size: 0.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--yellow);
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+.lp-next-item:first-child .lp-next-tag { color: var(--luz); opacity: 1; }
+.lp-next-time {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--branco);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.lp-next-source {
+  font-size: 0.52rem;
+  color: var(--azul2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.lp-next-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.lp-next-chip {
+  background: rgba(75,132,149,0.2);
+  border: 1px solid rgba(115,234,254,0.1);
+  border-radius: 10px;
+  padding: 2px 7px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--claro);
+  white-space: nowrap;
+  opacity: 0.8;
+}
+.lp-next-chip.lp-chip-leader {
+  background: rgba(92,230,92,0.08);
+  border-color: rgba(92,230,92,0.2);
+  color: var(--green);
+}
+.lp-next-count {
+  font-size: 0.52rem;
+  color: var(--azul2);
+  margin-top: 5px;
+  opacity: 0.6;
+}
+
+/* Bottom strip */
+#lp-bottom {
+  height: 32px;
+  border-top: 1px solid rgba(115,234,254,0.07);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+  background: rgba(18,36,48,0.6);
+}
+.lp-bottom-phrase {
+  font-size: 0.58rem;
+  color: var(--azul2);
+  opacity: 0.45;
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+.lp-refresh-info {
+  margin-left: auto;
+  font-size: 0.52rem;
+  color: var(--azul2);
+  opacity: 0.3;
+}
 </style>
 </head>
 <body>
@@ -553,6 +1538,7 @@ body {
   <button class="hbtn" onclick="App.toggleDupMode()" id="dup-btn" title="Ativar modo duplicar">⧉ Duplicar</button>
   <button class="hbtn danger" onclick="App.reset()">↺ Resetar</button>
   <button class="hbtn primary" onclick="App.export()">📋 Exportar</button>
+  <button class="hbtn" onclick="LivePanel.open()" title="Abrir Painel ao Vivo" style="border-color:rgba(115,234,254,0.35);color:var(--luz)">📺 Ao Vivo</button>
 </div>
 
 <!-- CONFLICT BAR -->
@@ -561,20 +1547,43 @@ body {
   <div id="conflict-chips"></div>
 </div>
 
+<!-- TAB BAR ← NOVO -->
+<div id="tab-bar">
+  <button class="tab-btn active" id="tab-principal" onclick="switchTab('principal')">📋 Escala Principal</button>
+  <button class="tab-btn" id="tab-intersecao" onclick="switchTab('intersecao')">🕐 Interseção</button>
+</div>
+
 <!-- LAYOUT -->
 <div id="layout">
   <!-- GRID AREA -->
   <div id="grid-area">
     <div id="schedule-grid"></div>
+    <div id="inter-list" style="display:none"></div>
   </div>
 
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div id="sidebar-header">
-      <h2>📊 Resumo</h2>
-      <p>Clique para destacar na grade</p>
+      <h2>📊 Resumo <span id="sidebar-tab-label" class="sidebar-tab-chip">Principal</span></h2>
+      <p>Clique para destacar · ver localização</p>
     </div>
     <div id="summary-list"></div>
+
+    <!-- POOL DE OBREIROS ← NOVO -->
+    <div id="pool-section">
+      <div id="pool-header" onclick="togglePool()">
+        <h3>👥 Pool de Obreiros <span id="pool-count" class="pool-count-badge"></span></h3>
+        <span id="pool-toggle-icon">▲</span>
+      </div>
+      <div id="pool-body">
+        <textarea id="pool-textarea" placeholder="Cole nomes aqui — um por linha ou separados por vírgula…"></textarea>
+        <div id="pool-actions">
+          <button id="pool-add-btn" onclick="addNamesToPool()">+ Adicionar</button>
+          <button id="pool-clear-btn" onclick="clearPool()">✕ Limpar</button>
+        </div>
+        <div id="pool-cards"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -590,16 +1599,80 @@ body {
     <div class="leg"><div class="leg-dot" style="background:#5ce65c"></div>⧉ Ctrl = duplicar</div>
   </div>
   <span id="status-msg">Pronto.</span>
-</div>
+  <div id="conn-dot" title="Status da conexão com o servidor"></div>
 
 <!-- HELPERS -->
 <div id="drag-ghost"></div>
 <div id="dup-indicator">⧉ MODO DUPLICAR ATIVO</div>
 <div id="toast"></div>
 
+<!-- WORKER PANEL — visão cruzada ← NOVO -->
+<div id="worker-panel-overlay" onclick="closeWorkerPanel()"></div>
+<div id="worker-panel">
+  <div class="wp-header">
+    <div class="wp-avatar" id="wp-avatar">?</div>
+    <div>
+      <div class="wp-title" id="wp-title">—</div>
+      <div class="wp-subtitle">Visão geral do obreiro</div>
+    </div>
+    <button class="wp-close" title="Fechar" onclick="closeWorkerPanel()">✕</button>
+  </div>
+  <div class="wp-body" id="wp-body"></div>
+</div>
+
+<!-- LIVE PANEL — PAINEL DE ESCALAS AO VIVO -->
+<div id="lp-overlay">
+  <!-- Top bar -->
+  <div id="lp-topbar">
+    <div id="lp-logo">📺 Painel ao Vivo <span>· Revisão de Vidas 2026</span></div>
+    <div id="lp-clock">--:--</div>
+    <div id="lp-date-str">carregando...</div>
+    <div class="lp-sep"></div>
+    <!-- Filtro: fonte -->
+    <div class="lp-filter-group" id="lpf-source">
+      <button class="lp-filter-btn active" data-val="all"          onclick="LivePanel.setFilter('source','all',this)">Ambas</button>
+      <button class="lp-filter-btn"        data-val="principal"    onclick="LivePanel.setFilter('source','principal',this)">Principal</button>
+      <button class="lp-filter-btn"        data-val="intersecao"   onclick="LivePanel.setFilter('source','intersecao',this)">Interseção</button>
+    </div>
+    <!-- Filtro: dia -->
+    <div class="lp-filter-group" id="lpf-day">
+      <button class="lp-filter-btn active" data-val="all"  onclick="LivePanel.setFilter('day','all',this)">Todos</button>
+      <button class="lp-filter-btn"        data-val="sex"  onclick="LivePanel.setFilter('day','sex',this)">Sexta</button>
+      <button class="lp-filter-btn"        data-val="sab"  onclick="LivePanel.setFilter('day','sab',this)">Sábado</button>
+      <button class="lp-filter-btn"        data-val="dom"  onclick="LivePanel.setFilter('day','dom',this)">Domingo</button>
+    </div>
+    <button class="lp-icon-btn" onclick="LivePanel.toggleFullscreen()" title="Tela cheia">⛶</button>
+    <button class="lp-icon-btn" onclick="LivePanel.close()" title="Fechar">✕</button>
+  </div>
+
+  <!-- 3 colunas -->
+  <div id="lp-body">
+    <!-- Esquerda: FINALIZADAS -->
+    <div id="lp-done-col">
+      <div class="lp-col-title">✓ Finalizadas</div>
+      <div id="lp-done-list"></div>
+    </div>
+    <!-- Centro: AGORA -->
+    <div id="lp-now-col">
+      <div id="lp-now-content"></div>
+    </div>
+    <!-- Direita: PRÓXIMAS -->
+    <div id="lp-next-col">
+      <div class="lp-col-title">→ Próximas</div>
+      <div id="lp-next-list"></div>
+    </div>
+  </div>
+
+  <!-- Bottom strip -->
+  <div id="lp-bottom">
+    <div class="lp-bottom-phrase" id="lp-phrase">Prepare-se para servir.</div>
+    <div class="lp-refresh-info" id="lp-refresh-info">—</div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   CONFIGURATION
+   CONFIGURATION  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 const CONFIG = {
   COLS: [
@@ -617,59 +1690,97 @@ const CONFIG = {
     { id: 'louça',      icon: '🍽️', label: 'Louça' },
     { id: 'fechamento', icon: '🔒', label: 'Fechamento' },
   ],
-  STORAGE_KEY: 'rv2026_schedule_v3'
+  STORAGE_KEY: 'rv2026_schedule_v4'
 };
 
 const DEFAULT_DATA = {
   'sex-noite': {
-    'louça': ['Karonlayne Staffy','Alexsandro Milke','Daniel Castilhos','Milena Vargas','Débora Castro']
+    'louça': ['Karonlayne Staffy','Alexsandro Milke','Daniel Tamanho','Milena Vargas','Débora Castro']
   },
   'sab-manha': {
     'dorm-fem':   ['Sophya Roberts','Débora Castro','Ágatha Teló','Karonlayne Staffy'],
     'dorm-mas':   ['Edson Forte','João Maciel','Alexsandro Milke','Gabriel Salgado'],
-    'auditorio':  ['Thyfani Milke','Ana Paula Milke','Thiaglyson'],
+    'auditorio':  ['Thyfani Milke','Ana Milke','Thiaglyson TH'],
     'refeitorio': ['Camilly Busatto','Luana Fink'],
-    'louça':      ['Guilherme Gabrielli','Daniel Pimentel','Thyfani Milke','Elison Perini','Laíne Fink']
+    'louça':      ['Guilherme Gabrielli','Daniel Castilhos','Thyfani Milke','Elison Perini','Laine Tamanho']
   },
   'sab-tarde': {
-    'dorm-fem':   ['Karyn Pimentel','Luana Machado','Josieli Quintana','Laíne Fink'],
+    'dorm-fem':   ['Karyn Pimentel','Luana Machado','Josieli Barros','Laine Tamanho'],
     'dorm-mas':   ['Glademir Chiminelli','Joshua Raine','Arthur Lennart','Felyppe Fiuza'],
     'auditorio':  ['Elison Perini','Guilherme Gabrielli','Milena Vargas'],
-    'refeitorio': ['Milena Vargas','Alexsandra Lima'],
+    'refeitorio': ['Milena Vargas','Rute Silva'],
     'louça':      ['Gabriel Salgado','Bruna Schonardie','Luana Fink','Joshua Raine','Felyppe Fiuza']
   },
   'dom-manha': {
-    'dorm-fem':   ['Thyfani Milke','Alexsandra Lima','Camilly Busatto','Bruna Schonardie'],
-    'dorm-mas':   ['Glauber Barros','Guilherme Gabrielli','Daniel Castilhos','Leandro Wolff'],
-    'auditorio':  ['Débora Castro','Thiaglyson','Ana Paula Milke'],
-    'refeitorio': ['Laíne Fink','Josieli Quintana'],
-    'louça':      ['Guilherme Bello','Leandro Wolff','Glademir Chiminelli','Sophya Roberts','Karyn Pimentel']
+    'dorm-fem':   ['Thyfani Milke','Rute Silva','Camilly Busatto','Bruna Schonardie'],
+    'dorm-mas':   ['Glauber Barros','Guilherme Gabrielli','Daniel Castilhos','Leandro Luz'],
+    'auditorio':  ['Débora Castro','Thiaglyson TH','Ana Milke'],
+    'refeitorio': ['Laine Tamanho','Josieli Barros'],
+    'louça':      ['Guilherme Bello','Leandro Luz','Glademir Chiminelli','Sophya Roberts','Karyn Pimentel']
   },
   'dom-tarde': {
     'dorm-fem':   ['Luana Fink','Milena Vargas','Nathieli Duarte'],
-    'dorm-mas':   ['Daniel Pimentel','Guilherme Bello'],
-    'auditorio':  ['Arthur Lennart','Karonlayne Staffy','Leandro Wolff'],
-    'louça':      ['Ana Paula Milke','Camilly Busatto','Vinicius Vasconcelos'],
-    'fechamento': ['Luana Machado','Glauber Barros','Josieli Quintana','Alexsandra Lima',
-                   'Thiaglyson','Nathieli Duarte','João Maciel','Ágatha Teló']
+    'dorm-mas':   ['Daniel Tamanho','Guilherme Bello'],
+    'auditorio':  ['Arthur Lennart','Karonlayne Staffy','Leandro Luz'],
+    'louça':      ['Ana Milke','Camilly Busatto','Vinicius Vasconcelos'],
+    'fechamento': ['Luana Machado','Glauber Barros','Josieli Barros','Rute Silva',
+                   'Thiaglyson TH','Nathieli Duarte','João Maciel','Ágatha Teló']
   }
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   STATE
+   CONFIG_INTER  ← NOVO — PADRÃO IDÊNTICO AO CONFIG
+   Horários 09:00 → 18:00, intervalo de 30 em 30 minutos
+═══════════════════════════════════════════════════════════════ */
+const CONFIG_INTER = {
+  /* Gera horarios 09:00-18:00 de 30 em 30 para Sabado e Domingo */
+  COLS: (() => {
+    const cols = [];
+    ['sab', 'dom'].forEach(dia => {
+      for (let h = 9; h <= 18; h++) {
+        const minutos = (h === 18) ? [0] : [0, 30];
+        minutos.forEach(m => {
+          const hh = String(h).padStart(2, '0');
+          const mm = String(m).padStart(2, '0');
+          cols.push({ id: 'inter-' + dia + '-' + hh + mm, shift: hh + ':' + mm, day: dia });
+        });
+      }
+    });
+    return cols;
+  })(),
+  ROWS: [
+    { id: 'obreiros', icon: '', label: '' },
+  ],
+  STORAGE_KEY: 'rv2026_intersecao_v2'
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   LÍDERES DA INTERSEÇÃO  ← NOVO
+   Nomes exatamente no padrão do sistema.
+   Recebem estilo verde quando sem conflito no horário.
+═══════════════════════════════════════════════════════════════ */
+const INTER_LEADERS = new Set([
+  'Ágatha Teló','Alex Milke','Nathieli Duarte','Guilherme Gabrielli',
+  'Ana Milke','João Maciel','Karyn Pimentel','Felyppe Fiuza',
+  'Bruna Schonardie','Glademir Chiminelli','Milena Vargas','Elison Perini',
+  'Daniel Tamanho','Gabriel Salgado'
+]);
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 const State = (() => {
   let data = null;
 
   function load() {
     try {
-      const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
+      const saved = RS.get(CONFIG.STORAGE_KEY);
       data = saved ? JSON.parse(saved) : clone(DEFAULT_DATA);
     } catch { data = clone(DEFAULT_DATA); }
   }
 
   function save() {
-    try { localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data)); } catch {}
+    try { RS.set(CONFIG.STORAGE_KEY, JSON.stringify(data)); } catch {}
   }
 
   function get() { return data; }
@@ -763,10 +1874,220 @@ const State = (() => {
   return { load, get, getCell, addPerson, removePerson, movePerson, duplicatePerson, reset, getConflicts, getConflictNames, getSummary, isConflicted };
 })();
 
+/* ═══════════════════════════════════════════════════════════════
+   STATE_INTER  ← NOVO — MESMO PADRÃO DO STATE, USA CONFIG_INTER
+═══════════════════════════════════════════════════════════════ */
+const StateInter = (() => {
+  let data = null;
+
+  function load() {
+    try {
+      const saved = RS.get(CONFIG_INTER.STORAGE_KEY);
+      data = saved ? JSON.parse(saved) : {};
+    } catch { data = {}; }
+  }
+
+  function save() {
+    try { RS.set(CONFIG_INTER.STORAGE_KEY, JSON.stringify(data)); } catch {}
+  }
+
+  function get() { return data; }
+
+  function getCell(slot, zone) {
+    if (!data[slot]) data[slot] = {};
+    if (!data[slot][zone]) data[slot][zone] = [];
+    return data[slot][zone];
+  }
+
+  function addPerson(slot, zone, name) {
+    const arr = getCell(slot, zone);
+    if (!arr.includes(name)) arr.push(name);
+    save();
+  }
+
+  function removePerson(slot, zone, name) {
+    const arr = getCell(slot, zone);
+    const idx = arr.indexOf(name);
+    if (idx !== -1) arr.splice(idx, 1);
+    save();
+  }
+
+  function movePerson(name, fromSlot, fromZone, toSlot, toZone) {
+    removePerson(fromSlot, fromZone, name);
+    addPerson(toSlot, toZone, name);
+  }
+
+  function duplicatePerson(name, toSlot, toZone) {
+    addPerson(toSlot, toZone, name);
+  }
+
+  function reset() {
+    data = {};
+    save();
+  }
+
+  function getConflicts() {
+    /* ── REGRA CORRIGIDA: conflito = mesmo nome 2x no MESMO horário ── */
+    const conflicts = [];
+    CONFIG_INTER.COLS.forEach(col => {
+      const names = ((data[col.id] || {})['obreiros'] || []);
+      const seen = {};
+      names.forEach(n => { seen[n] = (seen[n] || 0) + 1; });
+      Object.entries(seen).forEach(([name, count]) => {
+        if (count > 1) conflicts.push(`${name} — duplicado em ${col.shift}`);
+      });
+    });
+    return conflicts;
+  }
+
+  function getConflictNames() {
+    /* Retorna set com nomes que aparecem 2x no MESMO slot (qualquer slot) */
+    const conflicted = new Set();
+    CONFIG_INTER.COLS.forEach(col => {
+      const names = ((data[col.id] || {})['obreiros'] || []);
+      const seen = {};
+      names.forEach(n => { seen[n] = (seen[n] || 0) + 1; });
+      Object.entries(seen).forEach(([name, count]) => {
+        if (count > 1) conflicted.add(name);
+      });
+    });
+    return conflicted;
+  }
+
+  /* NOVA: conflitos restritos a um slot específico */
+  function getSlotConflictNames(slot) {
+    const names = ((data[slot] || {})['obreiros'] || []);
+    const seen = {};
+    names.forEach(n => { seen[n] = (seen[n] || 0) + 1; });
+    const conflicted = new Set();
+    Object.entries(seen).forEach(([name, count]) => {
+      if (count > 1) conflicted.add(name);
+    });
+    return conflicted;
+  }
+
+  function getSummary() {
+    const counts = {};
+    Object.values(data).forEach(slotData => {
+      Object.values(slotData).forEach(arr => {
+        arr.forEach(name => { counts[name] = (counts[name] || 0) + 1; });
+      });
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  function isConflicted(slot, name) {
+    /* conflitado: mesmo nome aparece 2x no mesmo slot */
+    const names = ((data[slot] || {})['obreiros'] || []);
+    return names.filter(n => n === name).length > 1;
+  }
+
+  return { load, get, getCell, addPerson, removePerson, movePerson, duplicatePerson, reset, getConflicts, getConflictNames, getSlotConflictNames, getSummary, isConflicted };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   POOL STATE  ← NOVO — GERENCIA LISTA DE OBREIROS DISPONÍVEIS
+═══════════════════════════════════════════════════════════════ */
+const DEFAULT_POOL = [
+  'Leandro Luz','Thiago Bitencourt','Mateus Souza','Rute Silva','João Molossi',
+  'Lidiane Rosa','Flavio Rosa','Milena Vargas','Thyfani Milke','Sophya Roberts',
+  'Daniel Castilhos','Edson Forte','Laine Tamanho','Ricardo Kolling','Guilherme Gabrielli',
+  'Felyppe Fiuza','Adriano Zacharias','Alina Zacharias','Camilly Busatto','Nathieli Duarte',
+  'Ágatha Teló','João Maciel','Vinicius Vasconcelos','Arthur Lennart','Karyn Pimentel',
+  'Glauber Barros','Thiaglyson TH','Luana Machado','Josieli Barros','Joshua Raine',
+  'Ana Milke','Gabriel Salgado','Débora Castro','Karonlayne Staffy','Caroline Formaio',
+  'Julia Rodrigues','Edson Júnior','Amanda Rodrigues','Janaina Espit','Guilherme Bello',
+  'José Antonio','Cláudio Júnior','Barbara Mendes','Eduarda Fassini','Luana Fink',
+  'Alexsandro Milke','Glademir Chiminelli','Daniel Tamanho','Douglas Rocha','Bruna Schonardie',
+  'Elison Perini'
+];
+
+const PoolState = (() => {
+  const STORAGE_KEY = 'rv2026_pool_v2';
+  let names = [];
+
+  function load() {
+    try {
+      const saved = RS.get(STORAGE_KEY);
+      names = saved ? JSON.parse(saved) : [...DEFAULT_POOL];
+      if (!saved) save(); /* persiste o padrão na primeira execução */
+    } catch { names = [...DEFAULT_POOL]; }
+  }
+
+  function save() {
+    try { RS.set(STORAGE_KEY, JSON.stringify(names)); } catch {}
+  }
+
+  function get() { return names; }
+
+  function add(name) {
+    const t = name.trim();
+    if (t && !names.includes(t)) { names.push(t); save(); }
+  }
+
+  function remove(name) {
+    const idx = names.indexOf(name);
+    if (idx !== -1) { names.splice(idx, 1); save(); }
+  }
+
+  function clear() { names = []; save(); }
+
+  return { load, get, add, remove, clear };
+})();
+
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
 /* ═══════════════════════════════════════════════════════════════
-   DRAG ENGINE
+   TAB MANAGEMENT  ← NOVO
+═══════════════════════════════════════════════════════════════ */
+let currentTab = 'principal';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-principal').classList.toggle('active', tab === 'principal');
+  document.getElementById('tab-intersecao').classList.toggle('active', tab === 'intersecao');
+  UI.clearHighlight();
+  closeWorkerPanel();
+  Render.refresh();
+  setStatus(tab === 'intersecao' ? '🕐 Escala Interseção — 09:00 às 18:00.' : '📋 Escala Principal.');
+}
+
+/* Retorna o State correto conforme aba ativa */
+function activeState() {
+  return currentTab === 'intersecao' ? StateInter : State;
+}
+
+/* Retorna o Config correto conforme aba ativa */
+function activeConfig() {
+  return currentTab === 'intersecao' ? CONFIG_INTER : CONFIG;
+}
+
+/* Resumo GLOBAL — soma as duas escalas */
+function getGlobalSummary() {
+  const counts = {};
+  Object.values(State.get()).forEach(slotData => {
+    Object.values(slotData).forEach(arr => {
+      arr.forEach(name => { counts[name] = (counts[name] || 0) + 1; });
+    });
+  });
+  Object.values(StateInter.get()).forEach(slotData => {
+    Object.values(slotData).forEach(arr => {
+      arr.forEach(name => { counts[name] = (counts[name] || 0) + 1; });
+    });
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+/* Conflitos GLOBAIS — une conflitos das duas escalas */
+function getGlobalConflictNames() {
+  const conflicted = new Set();
+  State.getConflictNames().forEach(n => conflicted.add(n));
+  StateInter.getConflictNames().forEach(n => conflicted.add(n));
+  return conflicted;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DRAG ENGINE  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 const DragEngine = (() => {
   let drag = null;
@@ -801,7 +2122,12 @@ const DragEngine = (() => {
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   RENDER ENGINE
+   RENDER ENGINE  ← MINIMAMENTE MODIFICADO:
+   · buildGrid usa activeConfig() / activeState()
+   · buildCell / buildCard recebem `st` como parâmetro
+   · updateConflictBar usa activeState()
+   · updateSummary usa getGlobalSummary() / getGlobalConflictNames()
+   · buildPoolCard  ← NOVA FUNÇÃO
 ═══════════════════════════════════════════════════════════════ */
 const Render = (() => {
   function initials(name) {
@@ -809,37 +2135,252 @@ const Render = (() => {
   }
 
   function buildGrid() {
+    const cfg = activeConfig();
+    const st  = activeState();
     const grid = document.getElementById('schedule-grid');
-    grid.innerHTML = '';
+    const interList = document.getElementById('inter-list');
 
-    const totalCols = CONFIG.COLS.length + 1;
-    grid.style.gridTemplateColumns = `100px repeat(${CONFIG.COLS.length}, 1fr)`;
+    /* ── INTERSEÇÃO: lista vertical ── */
+    if (currentTab === 'intersecao') {
+      grid.innerHTML = '';
+      grid.style.display = 'none';
+      interList.style.display = 'flex';
+      buildInterList(interList);
+      return;
+    }
+
+    /* ── ESCALA PRINCIPAL: layout original intacto ── */
+    interList.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+    const colCount = cfg.COLS.length;
+    grid.style.gridTemplateColumns = `100px repeat(${colCount}, 1fr)`;
+    grid.style.minWidth = '700px';
 
     // Corner
     const corner = el('div', 'col-hdr col-hdr-corner');
     grid.appendChild(corner);
 
     // Column headers
-    CONFIG.COLS.forEach(col => {
+    cfg.COLS.forEach(col => {
       const h = el('div', 'col-hdr');
       h.innerHTML = `<span class="shift">${col.shift}</span><span class="day">${col.day}</span>`;
       grid.appendChild(h);
     });
 
     // Rows
-    CONFIG.ROWS.forEach(row => {
+    cfg.ROWS.forEach(row => {
       const rh = el('div', 'row-hdr');
       rh.innerHTML = `<span class="ricon">${row.icon}</span><span class="rlabel">${row.label.replace('\n', '<br>')}</span>`;
       grid.appendChild(rh);
 
-      CONFIG.COLS.forEach(col => {
-        grid.appendChild(buildCell(col.id, row.id));
+      cfg.COLS.forEach(col => {
+        grid.appendChild(buildCell(col.id, row.id, st));
       });
     });
   }
 
-  function buildCell(slot, zone) {
-    const names = State.getCell(slot, zone);
+  /* buildInterList — renderiza dois paineis lado a lado: Sabado | Domingo */
+  function buildInterList(container) {
+    container.innerHTML = '';
+
+    const DIAS = [
+      { key: 'sab', label: '📅 Sábado' },
+      { key: 'dom', label: '📅 Domingo' },
+    ];
+
+    DIAS.forEach(function(dia, diaIdx) {
+      const col = el('div', 'inter-day-col');
+
+      const hdr = el('div', 'inter-day-header');
+      hdr.textContent = dia.label;
+      col.appendChild(hdr);
+
+      const diaCols = CONFIG_INTER.COLS.filter(c => c.day === dia.key);
+
+      /* Divisor de período */
+      const manha = el('div', 'inter-period-divider');
+      manha.textContent = '☀ Manhã';
+      col.appendChild(manha);
+
+      let passedNoon = false;
+
+      diaCols.forEach(function(slotCol) {
+        /* Insere divisor de tarde quando virar 13h */
+        const hour = parseInt(slotCol.shift.split(':')[0], 10);
+        if (!passedNoon && hour >= 13) {
+          passedNoon = true;
+          const tarde = el('div', 'inter-period-divider');
+          tarde.textContent = '🌆 Tarde';
+          col.appendChild(tarde);
+        }
+
+        /* Conflitos apenas do slot atual */
+        const slotConflicts = StateInter.getSlotConflictNames(slotCol.id);
+        const names = StateInter.getCell(slotCol.id, 'obreiros');
+        const hasConflict = slotConflicts.size > 0;
+
+        const row = el('div', 'inter-row' + (hasConflict ? ' inter-has-conflict' : ''));
+        row.dataset.slot = slotCol.id;
+        row.dataset.zone = 'obreiros';
+
+        const timeLabel = el('div', 'inter-time');
+        timeLabel.textContent = slotCol.shift;
+        row.appendChild(timeLabel);
+
+        const cardsWrap = el('div', 'inter-cards');
+        names.forEach(function(name) {
+          cardsWrap.appendChild(buildInterRowCard(name, slotCol.id, slotConflicts));
+        });
+        row.appendChild(cardsWrap);
+
+        const inpWrap = el('div', 'inter-inp-wrap');
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'inter-inp';
+        inp.placeholder = '+ adicionar...';
+        inp.autocomplete = 'off';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'inter-inp-btn';
+        addBtn.textContent = '+';
+        addBtn.title = 'Adicionar (ou Enter)';
+
+        (function(sid, sshift) {
+          function commitAdd() {
+            const name = inp.value.trim().replace(/\s+/g, ' ');
+            if (!name) return;
+            if (!validateFullName(name)) {
+              showToast('⚠ Use nome completo: ex. "João Silva"');
+              inp.classList.add('inp-error');
+              setTimeout(() => inp.classList.remove('inp-error'), 1500);
+              return;
+            }
+            StateInter.addPerson(sid, 'obreiros', name);
+            inp.value = '';
+            Render.refresh();
+            setStatus('+ ' + name + ' → ' + sshift);
+          }
+          inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { commitAdd(); e.preventDefault(); }
+          });
+          addBtn.addEventListener('click', function(e) { e.stopPropagation(); commitAdd(); });
+          inp.addEventListener('click', function(e) { e.stopPropagation(); });
+        })(slotCol.id, slotCol.shift);
+
+        inpWrap.appendChild(inp);
+        inpWrap.appendChild(addBtn);
+        row.appendChild(inpWrap);
+
+        (function(sid, sshift) {
+          row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            row.classList.add('drag-over');
+            DragEngine.moveGhost(e.clientX, e.clientY);
+          });
+          row.addEventListener('dragleave', function(e) {
+            if (!row.contains(e.relatedTarget)) row.classList.remove('drag-over');
+          });
+          row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            row.classList.remove('drag-over');
+            const drag = DragEngine.getCurrent();
+            if (!drag) return;
+            if (drag.slot === sid && drag.zone === 'obreiros') return;
+            const isFromExternal = (drag.slot === 'pool' || drag.slot === 'summary');
+            if (drag.isDup || isFromExternal) {
+              StateInter.duplicatePerson(drag.name, sid, 'obreiros');
+            } else {
+              StateInter.movePerson(drag.name, drag.slot, drag.zone, sid, 'obreiros');
+            }
+            setStatus((isFromExternal ? '+ Adicionado' : 'Movido') + ': ' + drag.name + ' → ' + sshift);
+            Render.refresh();
+          });
+        })(slotCol.id, slotCol.shift);
+
+        col.appendChild(row);
+      });
+
+      container.appendChild(col);
+
+      if (diaIdx === 0) {
+        container.appendChild(el('div', 'inter-day-sep'));
+      }
+    });
+  }
+
+  /* buildInterRowCard — lógica visual em 3 níveis:
+     1. conflito no mesmo horário → vermelho
+     2. líder sem conflito        → verde
+     3. demais                    → estilo normal                    */
+  function buildInterRowCard(name, slot, slotConflicts) {
+    /* slotConflicts: Set de nomes duplicados NESTE slot específico */
+    if (!slotConflicts) slotConflicts = StateInter.getSlotConflictNames(slot);
+    const isConflict    = slotConflicts.has(name);
+    const isLeader      = !isConflict && INTER_LEADERS.has(name);
+    const isHighlighted = UI.highlighted === name;
+
+    let cls = 'inter-card';
+    if (isConflict)    cls += ' inter-conflict-card';
+    else if (isLeader) cls += ' inter-leader-card';
+    if (isHighlighted) cls += ' highlighted-card';
+
+    const card = el('div', cls);
+    card.draggable = true;
+    card.dataset.name = name;
+    card.dataset.slot = slot;
+    card.dataset.zone = 'obreiros';
+
+    card.innerHTML = `
+      <div class="avatar">${initials(name)}</div>
+      <span class="card-name" title="${name}">${name}</span>
+      <button class="btn-del" title="Remover">✕</button>`;
+
+    // Desktop drag (move por padrão; Ctrl/dupMode = copia)
+    card.addEventListener('dragstart', e => {
+      const isDup = e.ctrlKey || e.metaKey || App.dupMode;
+      DragEngine.start(name, slot, 'obreiros', isDup, e.clientX, e.clientY);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = isDup ? 'copy' : 'move';
+      e.dataTransfer.setDragImage(new Image(), 0, 0);
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      DragEngine.end();
+    });
+
+    // Delete
+    card.querySelector('.btn-del').addEventListener('click', e => {
+      e.stopPropagation();
+      StateInter.removePerson(slot, 'obreiros', name);
+      Render.refresh();
+      setStatus(`Removido: ${name}`);
+    });
+
+    // Click = highlight
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('btn-del')) return;
+      UI.toggleHighlight(name);
+    });
+
+    // Touch drag
+    card.addEventListener('touchstart', e => {
+      touchDrag = { name, slot, zone: 'obreiros', isDup: App.dupMode };
+      const ghost = document.getElementById('drag-ghost');
+      ghost.textContent = (App.dupMode ? '⧉ ' : '') + name;
+      ghost.className = App.dupMode ? 'dup-mode' : '';
+      ghost.style.display = 'block';
+      card.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
+
+    return card;
+  }
+
+  function buildCell(slot, zone, st) {
+    st = st || activeState();
+    const names = st.getCell(slot, zone);
     const cell = el('div', 'cell' + (names.length ? ' has-cards' : ''));
     cell.dataset.slot = slot;
     cell.dataset.zone = zone;
@@ -848,7 +2389,7 @@ const Render = (() => {
     count.textContent = names.length || '';
     cell.appendChild(count);
 
-    names.forEach(name => cell.appendChild(buildCard(name, slot, zone)));
+    names.forEach(name => cell.appendChild(buildCard(name, slot, zone, st)));
 
     // Drop events
     cell.addEventListener('dragover', onCellDragOver);
@@ -862,8 +2403,9 @@ const Render = (() => {
     return cell;
   }
 
-  function buildCard(name, slot, zone) {
-    const conflicted = State.isConflicted(slot, name);
+  function buildCard(name, slot, zone, st) {
+    st = st || activeState();
+    const conflicted = st.isConflicted(slot, name);
     const card = el('div', 'card' + (conflicted ? ' conflict' : ''));
     card.draggable = true;
     card.dataset.name = name;
@@ -900,13 +2442,62 @@ const Render = (() => {
     // Delete button
     card.querySelector('.btn-del').addEventListener('click', e => {
       e.stopPropagation();
-      State.removePerson(slot, zone, name);
+      st.removePerson(slot, zone, name);
       Render.refresh();
       setStatus(`Removido: ${name}`);
     });
 
     // Touch drag
     card.addEventListener('touchstart', onCardTouchStart, { passive: false });
+
+    return card;
+  }
+
+  /* buildPoolCard ← NOVA FUNÇÃO — mesmo padrão do buildCard */
+  function buildPoolCard(name) {
+    const card = el('div', 'card pool-card');
+    card.draggable = true;
+    card.dataset.name = name;
+    card.dataset.slot = 'pool';
+    card.dataset.zone = 'pool';
+
+    card.innerHTML = `
+      <div class="avatar">${initials(name)}</div>
+      <span class="card-name" title="${name}">${name}</span>
+      <div class="card-actions">
+        <button class="card-btn btn-del" title="Remover do pool">✕</button>
+      </div>`;
+
+    // Desktop drag — pool sempre copia (isDup=true)
+    card.addEventListener('dragstart', e => {
+      DragEngine.start(name, 'pool', 'pool', true, e.clientX, e.clientY);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setDragImage(new Image(), 0, 0);
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      DragEngine.end();
+    });
+
+    // Delete button
+    card.querySelector('.btn-del').addEventListener('click', e => {
+      e.stopPropagation();
+      PoolState.remove(name);
+      renderPool();
+      setStatus(`Removido do pool: ${name}`);
+    });
+
+    // Touch drag — pool sempre copia
+    card.addEventListener('touchstart', e => {
+      touchDrag = { name, slot: 'pool', zone: 'pool', isDup: true };
+      const ghost = document.getElementById('drag-ghost');
+      ghost.textContent = '⧉ ' + name;
+      ghost.className = 'dup-mode';
+      ghost.style.display = 'block';
+      card.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
 
     return card;
   }
@@ -920,7 +2511,8 @@ const Render = (() => {
   }
 
   function updateConflictBar() {
-    const conflicts = State.getConflicts();
+    /* usa activeState() para mostrar conflitos da aba ativa */
+    const conflicts = activeState().getConflicts();
     const bar = document.getElementById('conflict-bar');
     const chips = document.getElementById('conflict-chips');
     chips.innerHTML = '';
@@ -939,27 +2531,111 @@ const Render = (() => {
 
   function updateSummary() {
     const list = document.getElementById('summary-list');
-    const summary = State.getSummary();
-    const conflictNames = State.getConflictNames();
-    const query = document.getElementById('search-input').value.toLowerCase();
+    const query          = document.getElementById('search-input').value.toLowerCase();
     const activeHighlight = UI.highlighted;
+
+    /* atualiza chip de aba no cabeçalho do sidebar */
+    const lbl = document.getElementById('sidebar-tab-label');
+    if (lbl) lbl.textContent = currentTab === 'intersecao' ? 'Interseção' : 'Principal';
+
+    /* ── ABA INTERSEÇÃO: mostra TODOS os obreiros com contagem ── */
+    if (currentTab === 'intersecao') {
+      /* visibilidade dos cards do pool — ocultos na Interseção */
+      const poolCards = document.getElementById('pool-cards');
+      if (poolCards) poolCards.style.display = 'none';
+
+      /* monta mapa de contagens da Interseção */
+      const countsMap = {};
+      StateInter.getSummary().forEach(([n, c]) => { countsMap[n] = c; });
+
+      /* lista completa = pool + quem estiver na escala mas não no pool */
+      const allNames = new Set(PoolState.get());
+      Object.keys(countsMap).forEach(n => allNames.add(n));
+
+      /* filtra por busca */
+      const filtered = [...allNames].filter(n =>
+        !query || n.toLowerCase().includes(query)
+      );
+
+      /* ordena: com ocorrências (desc count, asc nome) → sem ocorrências (asc nome) */
+      const withCount    = filtered.filter(n => (countsMap[n] || 0) > 0)
+                                    .sort((a,b) => (countsMap[b]||0)-(countsMap[a]||0) || a.localeCompare(b));
+      const withoutCount = filtered.filter(n => !(countsMap[n] || 0))
+                                    .sort((a,b) => a.localeCompare(b));
+
+      list.innerHTML = '';
+      const conflictNames = StateInter.getConflictNames();
+
+      /* — bloco: já escalados — */
+      if (withCount.length) {
+        const div1 = el('div', 'summary-divider');
+        div1.textContent = 'Na escala';
+        list.appendChild(div1);
+        withCount.forEach(name => list.appendChild(
+          buildSummaryItem(name, countsMap[name] || 0, conflictNames, activeHighlight)
+        ));
+      }
+
+      /* — bloco: ainda não escalados — */
+      if (withoutCount.length) {
+        const div2 = el('div', 'summary-divider');
+        div2.textContent = 'Disponíveis';
+        list.appendChild(div2);
+        withoutCount.forEach(name => list.appendChild(
+          buildSummaryItem(name, 0, conflictNames, activeHighlight)
+        ));
+      }
+      return;
+    }
+
+    /* ── ESCALA PRINCIPAL: comportamento original ── */
+    const poolCards = document.getElementById('pool-cards');
+    if (poolCards) poolCards.style.display = '';
+
+    const summary       = activeState().getSummary();
+    const conflictNames = activeState().getConflictNames();
 
     list.innerHTML = '';
     summary.forEach(([name, count]) => {
       if (query && !name.toLowerCase().includes(query)) return;
-
-      const item = el('div', 'summary-item' +
-        (conflictNames.has(name) ? ' has-conflict' : '') +
-        (activeHighlight === name ? ' active' : ''));
-
-      item.innerHTML = `
-        <div class="si-av">${initials(name)}</div>
-        <span class="si-name" title="${name}">${name}</span>
-        <span class="si-badge">${count}</span>`;
-
-      item.addEventListener('click', () => UI.toggleHighlight(name));
-      list.appendChild(item);
+      list.appendChild(buildSummaryItem(name, count, conflictNames, activeHighlight));
     });
+  }
+
+  /* buildSummaryItem — cria um item do resumo lateral */
+  function buildSummaryItem(name, count, conflictNames, activeHighlight) {
+    const isConflict = conflictNames && conflictNames.has(name);
+    const isLeader   = currentTab === 'intersecao' && INTER_LEADERS.has(name) && !isConflict;
+    const isZero     = count === 0;
+
+    let cls = 'summary-item';
+    if (isConflict)          cls += ' has-conflict';
+    else if (isLeader)       cls += ' si-leader';
+    if (isZero)              cls += ' si-zero';
+    if (activeHighlight === name) cls += ' active';
+
+    const item = el('div', cls);
+    item.draggable = true;
+    item.dataset.name = name;
+
+    item.innerHTML = `
+      <div class="si-av">${initials(name)}</div>
+      <span class="si-name" title="${name}">${name}</span>
+      <span class="si-badge">${count}</span>`;
+
+    item.addEventListener('dragstart', e => {
+      DragEngine.start(name, 'summary', 'summary', true, e.clientX, e.clientY);
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setDragImage(new Image(), 0, 0);
+    });
+    item.addEventListener('dragend', () => DragEngine.end());
+
+    item.addEventListener('click', () => {
+      UI.toggleHighlight(name);
+      showWorkerPanel(name);
+    });
+
+    return item;
   }
 
   function el(tag, cls) {
@@ -972,11 +2648,11 @@ const Render = (() => {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   }
 
-  return { buildGrid, buildCell, buildCard, refresh, updateConflictBar, updateSummary, initials };
+  return { buildGrid, buildCell, buildCard, buildPoolCard, refresh, updateConflictBar, updateSummary, initials };
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   DRAG HANDLERS
+   DRAG HANDLERS  ← ORIGINAL INTACTO (onCellDragOver, onCellDragLeave)
 ═══════════════════════════════════════════════════════════════ */
 function onCellDragOver(e) {
   e.preventDefault();
@@ -989,6 +2665,9 @@ function onCellDragLeave(e) {
   if (!this.contains(e.relatedTarget)) this.classList.remove('drag-over');
 }
 
+/* onCellDrop ← MINIMAMENTE MODIFICADO:
+   · usa activeState() em vez de State direto
+   · drag vindo do pool SEMPRE duplica (nunca remove do pool) */
 function onCellDrop(e) {
   e.preventDefault();
   this.classList.remove('drag-over');
@@ -1000,11 +2679,14 @@ function onCellDrop(e) {
 
   if (drag.slot === toSlot && drag.zone === toZone) return;
 
-  if (drag.isDup) {
-    State.duplicatePerson(drag.name, toSlot, toZone);
-    setStatus(`⧉ Duplicado: ${drag.name} → ${toZone}`);
+  const isFromPool = drag.slot === 'pool';
+  const st = activeState();
+
+  if (drag.isDup || isFromPool) {
+    st.duplicatePerson(drag.name, toSlot, toZone);
+    setStatus(`${isFromPool ? '+ Adicionado' : '⧉ Duplicado'}: ${drag.name} → ${toZone}`);
   } else {
-    State.movePerson(drag.name, drag.slot, drag.zone, toSlot, toZone);
+    st.movePerson(drag.name, drag.slot, drag.zone, toSlot, toZone);
     setStatus(`Movido: ${drag.name} → ${toZone}`);
   }
 
@@ -1016,7 +2698,8 @@ document.addEventListener('dragover', e => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   TOUCH DRAG
+   TOUCH DRAG  ← MINIMAMENTE MODIFICADO:
+   · touchend usa activeState() e trata pool
 ═══════════════════════════════════════════════════════════════ */
 let touchDrag = null;
 
@@ -1042,31 +2725,33 @@ document.addEventListener('touchmove', e => {
   const t = e.touches[0];
   document.getElementById('drag-ghost').style.left = t.clientX + 'px';
   document.getElementById('drag-ghost').style.top = t.clientY + 'px';
-  document.querySelectorAll('.cell.drag-over').forEach(c => c.classList.remove('drag-over'));
-  const el = document.elementFromPoint(t.clientX, t.clientY);
-  const cell = el && el.closest('.cell[data-slot]');
+  document.querySelectorAll('.cell.drag-over, .inter-row.drag-over').forEach(c => c.classList.remove('drag-over'));
+  const elAt = document.elementFromPoint(t.clientX, t.clientY);
+  const cell = elAt && (elAt.closest('.cell[data-slot]') || elAt.closest('.inter-row[data-slot]'));
   if (cell) cell.classList.add('drag-over');
 }, { passive: false });
 
 document.addEventListener('touchend', e => {
   if (!touchDrag) return;
   document.getElementById('drag-ghost').style.display = 'none';
-  document.querySelectorAll('.card.dragging').forEach(c => c.classList.remove('dragging'));
-  document.querySelectorAll('.cell.drag-over').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.card.dragging, .inter-card.dragging').forEach(c => c.classList.remove('dragging'));
+  document.querySelectorAll('.cell.drag-over, .inter-row.drag-over').forEach(c => c.classList.remove('drag-over'));
 
   const t = e.changedTouches[0];
-  const el = document.elementFromPoint(t.clientX, t.clientY);
-  const cell = el && el.closest('.cell[data-slot]');
+  const elAt = document.elementFromPoint(t.clientX, t.clientY);
+  const cell = elAt && (elAt.closest('.cell[data-slot]') || elAt.closest('.inter-row[data-slot]'));
 
   if (cell) {
     const toSlot = cell.dataset.slot;
     const toZone = cell.dataset.zone;
+    const isFromPool = touchDrag.slot === 'pool';
+    const st = activeState();
     if (!(toSlot === touchDrag.slot && toZone === touchDrag.zone)) {
-      if (touchDrag.isDup) {
-        State.duplicatePerson(touchDrag.name, toSlot, toZone);
-        setStatus(`⧉ Duplicado: ${touchDrag.name}`);
+      if (touchDrag.isDup || isFromPool) {
+        st.duplicatePerson(touchDrag.name, toSlot, toZone);
+        setStatus(`${isFromPool ? '+ Adicionado' : '⧉ Duplicado'}: ${touchDrag.name}`);
       } else {
-        State.movePerson(touchDrag.name, touchDrag.slot, touchDrag.zone, toSlot, toZone);
+        st.movePerson(touchDrag.name, touchDrag.slot, touchDrag.zone, toSlot, toZone);
         setStatus(`Movido: ${touchDrag.name}`);
       }
       Render.refresh();
@@ -1076,7 +2761,7 @@ document.addEventListener('touchend', e => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   UI HELPERS
+   UI HELPERS  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 const UI = (() => {
   let highlighted = null;
@@ -1098,7 +2783,7 @@ const UI = (() => {
 
 function applyHighlight() {
   const name = UI.highlighted;
-  document.querySelectorAll('.card').forEach(card => {
+  document.querySelectorAll('.card, .inter-card').forEach(card => {
     if (!name) {
       card.classList.remove('highlighted-card');
     } else {
@@ -1113,11 +2798,21 @@ function applyHighlight() {
       cell.classList.toggle('highlighted', has);
     }
   });
+  /* highlight nas linhas da Interseção */
+  document.querySelectorAll('.inter-row').forEach(row => {
+    if (!name) {
+      row.classList.remove('highlighted');
+    } else {
+      const has = Array.from(row.querySelectorAll('.inter-card')).some(c => c.dataset.name === name);
+      row.style.borderColor = has ? 'var(--yellow)' : '';
+      row.style.background  = has ? 'rgba(255,200,87,0.06)' : '';
+    }
+  });
 }
 
 function applySearch() {
   const q = document.getElementById('search-input').value.toLowerCase().trim();
-  document.querySelectorAll('.card').forEach(card => {
+  document.querySelectorAll('.card, .inter-card').forEach(card => {
     if (!q) {
       card.classList.remove('search-dim');
     } else {
@@ -1127,7 +2822,7 @@ function applySearch() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STATUS & TOAST
+   STATUS & TOAST  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 let statusTimer = null;
 function setStatus(msg) {
@@ -1151,7 +2846,7 @@ function showToast(msg) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN APP
+   MAIN APP  ← reset e export adaptados para aba ativa
 ═══════════════════════════════════════════════════════════════ */
 const App = (() => {
   let dupMode = false;
@@ -1182,26 +2877,56 @@ const App = (() => {
     setStatus(`Selecione destino para duplicar ${name.split(' ')[0]}`);
   }
 
+  /* reset reseta apenas a aba ativa */
   function reset() {
-    if (!confirm('Resetar toda a escala para o estado original?')) return;
-    State.reset();
+    const tabName = currentTab === 'intersecao' ? 'Interseção' : 'Principal';
+    if (!confirm(`Resetar a escala ${tabName} para o estado original?`)) return;
+    activeState().reset();
     UI.clearHighlight();
     Render.refresh();
-    setStatus('Escala resetada.');
+    setStatus(`Escala ${tabName} resetada.`);
   }
 
+  /* export exporta a aba ativa */
   function exportSchedule() {
+    const ZONE_LABELS = {
+      'dorm-fem': 'Dorm. Feminino', 'dorm-mas': 'Dorm. Masculino',
+      'auditorio': 'Auditório', 'refeitorio': 'Refeitório',
+      'louça': 'Louça', 'fechamento': 'Fechamento'
+    };
+
+    if (currentTab === 'intersecao') {
+      let out = 'ESCALA — INTERSEÇÃO\n';
+      out += '═'.repeat(36) + '\n\n';
+      CONFIG_INTER.COLS.forEach(col => {
+        const slotData = StateInter.get()[col.id] || {};
+        const lines = [];
+        CONFIG_INTER.ROWS.forEach(row => {
+          const names = slotData[row.id] || [];
+          if (names.length) lines.push(`  ${ZONE_LABELS[row.id]}: ${names.join(', ')}`);
+        });
+        if (lines.length) { out += `▸ ${col.shift}\n${lines.join('\n')}\n\n`; }
+      });
+      out += '─'.repeat(36) + '\n📊 RESUMO\n';
+      StateInter.getSummary().forEach(([name, count]) => {
+        out += `  ${name} (${count}x)\n`;
+      });
+      const conflicts = StateInter.getConflicts();
+      if (conflicts.length) {
+        out += '\n⚠ CONFLITOS\n';
+        conflicts.forEach(c => { out += `  ${c}\n`; });
+      }
+      navigator.clipboard.writeText(out).then(() => showToast('✓ Escala copiada!'));
+      return;
+    }
+
+    /* export da escala principal — original intacto */
     const SLOT_LABELS = {
       'sex-noite':  'SEXTA · NOITE',
       'sab-manha':  'SÁBADO · 7h–14h',
       'sab-tarde':  'SÁBADO · 15h–22h',
       'dom-manha':  'DOMINGO · 7h–14h',
       'dom-tarde':  'DOMINGO · 15h–18h'
-    };
-    const ZONE_LABELS = {
-      'dorm-fem': 'Dorm. Feminino', 'dorm-mas': 'Dorm. Masculino',
-      'auditorio': 'Auditório', 'refeitorio': 'Refeitório',
-      'louça': 'Louça', 'fechamento': 'Fechamento'
     };
     let out = 'ESCALA — REVISÃO DE VIDAS 2026\n';
     out += '═'.repeat(36) + '\n\n';
@@ -1236,7 +2961,75 @@ const App = (() => {
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   EVENTS
+   POOL FUNCTIONS  ← NOVO
+═══════════════════════════════════════════════════════════════ */
+function renderPool() {
+  const container = document.getElementById('pool-cards');
+  if (!container) return;
+  container.innerHTML = '';
+  const names = PoolState.get();
+  if (names.length === 0) {
+    const empty = document.createElement('div');
+    empty.id = 'pool-empty';
+    empty.textContent = 'Nenhum obreiro no pool';
+    container.appendChild(empty);
+  } else {
+    names.forEach(name => {
+      container.appendChild(Render.buildPoolCard(name));
+    });
+  }
+  const badge = document.getElementById('pool-count');
+  if (badge) badge.textContent = names.length > 0 ? String(names.length) : '';
+}
+
+function addNamesToPool() {
+  const textarea = document.getElementById('pool-textarea');
+  const raw = textarea.value.trim();
+  if (!raw) return;
+  /* aceita nomes separados por quebra de linha ou por vírgula */
+  const names = raw.split(/[\n,]+/).map(n => n.trim().replace(/\s+/g, ' ')).filter(Boolean);
+  const valid = [], invalid = [];
+  names.forEach(name => {
+    if (!validateFullName(name)) {
+      invalid.push(name);
+    } else {
+      PoolState.add(name);
+      valid.push(name);
+    }
+  });
+  /* devolve nomes inválidos ao textarea */
+  textarea.value = invalid.join('\n');
+  renderPool();
+  if (valid.length) setStatus(`${valid.length} obreiro(s) adicionado(s) ao pool.`);
+  if (invalid.length) {
+    showToast(`⚠ Nome incompleto (${invalid.length}): use nome e sobrenome.`);
+    textarea.focus();
+  }
+}
+
+function clearPool() {
+  if (!confirm('Limpar todos os obreiros do pool?')) return;
+  PoolState.clear();
+  renderPool();
+  setStatus('Pool limpo.');
+}
+
+let poolExpanded = true;
+function togglePool() {
+  poolExpanded = !poolExpanded;
+  const body = document.getElementById('pool-body');
+  const icon = document.getElementById('pool-toggle-icon');
+  if (poolExpanded) {
+    body.classList.remove('hidden');
+    icon.classList.remove('collapsed');
+  } else {
+    body.classList.add('hidden');
+    icon.classList.add('collapsed');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVENTS  ← ORIGINAL INTACTO
 ═══════════════════════════════════════════════════════════════ */
 document.getElementById('search-input').addEventListener('input', () => {
   applySearch();
@@ -1246,6 +3039,7 @@ document.getElementById('search-input').addEventListener('input', () => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     UI.clearHighlight();
+    closeWorkerPanel();
     document.getElementById('search-input').value = '';
     applySearch();
     Render.updateSummary();
@@ -1253,11 +3047,463 @@ document.addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   BOOT
+   VALIDAÇÃO DE NOME COMPLETO  ← NOVO
+   Exige pelo menos 2 palavras (nome + sobrenome)
 ═══════════════════════════════════════════════════════════════ */
-State.load();
-Render.refresh();
-setStatus('Escala carregada. ' + (localStorage.getItem(CONFIG.STORAGE_KEY) ? '(Dado salvo restaurado)' : '(Dados padrão)'));
+function validateFullName(name) {
+  const parts = (name || '').trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+  return parts.length >= 2;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WORKER PANEL — visão cruzada completa do obreiro  ← NOVO
+═══════════════════════════════════════════════════════════════ */
+function showWorkerPanel(name) {
+  /* localiza em qual célula da Escala Principal */
+  const ZONE_LABELS = {
+    'dorm-fem':   'Dorm. Feminino',
+    'dorm-mas':   'Dorm. Masculino',
+    'auditorio':  'Auditório',
+    'refeitorio': 'Refeitório',
+    'louça':      'Louça',
+    'fechamento': 'Fechamento'
+  };
+  const principalSlots = [];
+  CONFIG.COLS.forEach(col => {
+    CONFIG.ROWS.forEach(row => {
+      const names = (State.get()[col.id] || {})[row.id] || [];
+      if (names.includes(name)) {
+        principalSlots.push(`${ZONE_LABELS[row.id] || row.label} · ${col.shift} / ${col.day}`);
+      }
+    });
+  });
+
+  /* localiza em quais horários da Interseção */
+  const interSlots = [];
+  CONFIG_INTER.COLS.forEach(col => {
+    const names = ((StateInter.get()[col.id] || {})['obreiros']) || [];
+    if (names.includes(name)) {
+      interSlots.push(`${col.shift} — ${col.day === 'sab' ? 'Sábado' : 'Domingo'}`);
+    }
+  });
+
+  /* preenche cabeçalho */
+  const initFn = n => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('wp-avatar').textContent = initFn(name);
+  document.getElementById('wp-title').textContent   = name;
+
+  /* monta corpo */
+  const body = document.getElementById('wp-body');
+  body.innerHTML = '';
+  body.appendChild(buildWpSection('📋 Escala Principal', principalSlots));
+  body.appendChild(buildWpSection('🕐 Interseção',       interSlots));
+
+  /* exibe */
+  document.getElementById('worker-panel').classList.add('show');
+  document.getElementById('worker-panel-overlay').classList.add('show');
+}
+
+function buildWpSection(title, slots) {
+  const sec   = document.createElement('div');
+  sec.className = 'wp-section';
+
+  const hdr   = document.createElement('div');
+  hdr.className = 'wp-section-header';
+
+  const t     = document.createElement('span');
+  t.className = 'wp-section-title';
+  t.textContent = title;
+
+  const badge = document.createElement('span');
+  badge.className = 'wp-count-badge' + (slots.length === 0 ? ' zero' : '');
+  badge.textContent = slots.length + 'x';
+
+  hdr.appendChild(t);
+  hdr.appendChild(badge);
+  sec.appendChild(hdr);
+
+  const list = document.createElement('div');
+  list.className = 'wp-slot-list';
+
+  if (slots.length === 0) {
+    const none = document.createElement('div');
+    none.className = 'wp-none';
+    none.textContent = 'Não escalado aqui';
+    list.appendChild(none);
+  } else {
+    slots.forEach(slot => {
+      const item = document.createElement('div');
+      item.className = 'wp-slot-item';
+      item.textContent = slot;
+      list.appendChild(item);
+    });
+  }
+
+  sec.appendChild(list);
+  return sec;
+}
+
+function closeWorkerPanel() {
+  document.getElementById('worker-panel').classList.remove('show');
+  document.getElementById('worker-panel-overlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIVE PANEL — PAINEL DE ESCALAS AO VIVO  ← NOVO
+   Consome State + StateInter sem modificá-los.
+   Lógica: getStatus() classifica cada slot em now/next/done
+   com base no relógio real do navegador.
+═══════════════════════════════════════════════════════════════ */
+const LivePanel = (() => {
+  let tickTimer    = null;
+  let fSource      = 'all';   // 'all' | 'principal' | 'intersecao'
+  let fDay         = 'all';   // 'all' | 'sex' | 'sab' | 'dom'
+  let phraseIdx    = 0;
+
+  const PHRASES = [
+    'Prepare-se para servir.',
+    'Sua escala está chegando.',
+    'Obrigado por servir.',
+    'Próximo time em preparação.',
+    'Juntos somos mais fortes.',
+    'Servir é um privilégio.',
+  ];
+
+  /* ── Mapeamento de data/hora para cada slot da Escala Principal ── */
+  const PRINCIPAL_TIMES = {
+    'sex-noite': { date:'2026-03-27', start:'19:00', end:'23:30', label:'Sexta · Noite',      day:'sex' },
+    'sab-manha': { date:'2026-03-28', start:'07:00', end:'14:00', label:'Sábado · Manhã',     day:'sab' },
+    'sab-tarde': { date:'2026-03-28', start:'15:00', end:'22:00', label:'Sábado · Tarde',     day:'sab' },
+    'dom-manha': { date:'2026-03-29', start:'07:00', end:'14:00', label:'Domingo · Manhã',    day:'dom' },
+    'dom-tarde': { date:'2026-03-29', start:'15:00', end:'18:00', label:'Domingo · Tarde',    day:'dom' },
+  };
+
+  /* ── Converte "YYYY-MM-DD" + "HH:MM" em Date ── */
+  function toDate(dateStr, timeStr) {
+    const [y,mo,d]  = dateStr.split('-').map(Number);
+    const [h,m]     = timeStr.split(':').map(Number);
+    return new Date(y, mo-1, d, h, m, 0);
+  }
+
+  /* ── Classifica um slot ──
+     'now'  → start ≤ agora ≤ end
+     'next' → agora < start
+     'done' → agora > end                                        */
+  function getStatus(dateStr, startStr, endStr) {
+    const now   = new Date();
+    const start = toDate(dateStr, startStr);
+    const end   = toDate(dateStr, endStr);
+    if (now < start) return 'next';
+    if (now > end)   return 'done';
+    return 'now';
+  }
+
+  /* ── Monta lista de entradas com status ── */
+  function buildEntries() {
+    const entries = [];
+
+    /* Escala Principal */
+    if (fSource !== 'intersecao') {
+      CONFIG.COLS.forEach(col => {
+        const t = PRINCIPAL_TIMES[col.id];
+        if (!t) return;
+        if (fDay !== 'all' && fDay !== t.day) return;
+        const slotData = State.get()[col.id] || {};
+        const zones = [];
+        CONFIG.ROWS.forEach(row => {
+          const names = slotData[row.id] || [];
+          if (names.length) zones.push({ zone: row.label.replace('\n',' '), names });
+        });
+        const allNames = zones.flatMap(z => z.names);
+        entries.push({
+          id: col.id, source: 'principal',
+          label: t.label, day: t.day, date: t.date,
+          start: t.start, end: t.end,
+          status: getStatus(t.date, t.start, t.end),
+          zones, allNames, count: allNames.length
+        });
+      });
+    }
+
+    /* Interseção */
+    if (fSource !== 'principal') {
+      CONFIG_INTER.COLS.forEach(col => {
+        if (fDay !== 'all' && fDay !== col.day) return;
+        const names = StateInter.getCell(col.id, 'obreiros');
+        if (!names.length) return;
+        const dateStr = col.day === 'sab' ? '2026-03-28' : '2026-03-29';
+        const [sh, sm] = col.shift.split(':').map(Number);
+        const endTotalM = sm + 30;
+        const endH = String(sh + Math.floor(endTotalM/60)).padStart(2,'0');
+        const endM = String(endTotalM % 60).padStart(2,'0');
+        const endStr = endH + ':' + endM;
+        const dayLabel = col.day === 'sab' ? 'Sábado' : 'Domingo';
+        entries.push({
+          id: col.id, source: 'intersecao',
+          label: dayLabel + ' · ' + col.shift, day: col.day,
+          date: dateStr, start: col.shift, end: endStr,
+          status: getStatus(dateStr, col.shift, endStr),
+          zones: [{ zone: 'Interseção', names }],
+          allNames: names, count: names.length
+        });
+      });
+    }
+
+    /* Ordena cronologicamente */
+    entries.sort((a, b) => toDate(a.date, a.start) - toDate(b.date, b.start));
+    return entries;
+  }
+
+  /* ── Helpers de render ── */
+  function initials(name) {
+    return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  }
+
+  function chipHtml(name, small) {
+    const isLeader = INTER_LEADERS.has(name);
+    const cls = (small ? 'lp-next-chip' : 'lp-chip') + (isLeader ? ' lp-chip-leader' : '');
+    return `<span class="${cls}">${name}</span>`;
+  }
+
+  function sourceLabel(s) {
+    return s === 'principal' ? '📋 Escala Principal' : '🕐 Interseção';
+  }
+
+  /* ── Renderiza coluna FINALIZADAS ── */
+  function renderDone(done) {
+    const el = document.getElementById('lp-done-list');
+    if (!el) return;
+    el.innerHTML = '';
+    if (!done.length) {
+      el.innerHTML = '<div style="font-size:0.58rem;color:var(--azul2);opacity:0.4;padding:12px 6px;text-align:center">Nenhuma finalizada</div>';
+      return;
+    }
+    done.slice().reverse().forEach(e => {
+      el.innerHTML += `
+        <div class="lp-done-item">
+          <span class="lp-done-check">✓</span>
+          <div class="lp-done-info">
+            <div class="lp-done-label">${e.label}</div>
+            <div class="lp-done-count">${e.count} pessoa${e.count !== 1 ? 's' : ''} · ${sourceLabel(e.source).split(' ')[0]} ${sourceLabel(e.source).split(' ').slice(1).join(' ')}</div>
+          </div>
+        </div>`;
+    });
+  }
+
+  /* ── Renderiza bloco AGORA ── */
+  function renderNow(entry) {
+    const el = document.getElementById('lp-now-content');
+    if (!el) return;
+
+    if (!entry) {
+      el.innerHTML = `
+        <div class="lp-now-empty">
+          <div class="lp-big-msg">Aguardando<br>próxima escala</div>
+          <div class="lp-sub-msg">Nenhuma escala ativa no momento</div>
+        </div>`;
+      return;
+    }
+
+    const zonesHtml = entry.zones.map(z => `
+      <div class="lp-now-zone-row">
+        <span class="lp-now-zone-lbl">${z.zone}</span>
+        <div class="lp-now-chips">${z.names.map(n => chipHtml(n, false)).join('')}</div>
+      </div>`).join('');
+
+    el.innerHTML = `
+      <div class="lp-now-card">
+        <div class="lp-now-tag">● AGORA</div>
+        <div class="lp-now-time">${entry.label}</div>
+        <div class="lp-now-source">${sourceLabel(entry.source)}</div>
+        <div class="lp-now-zones">${zonesHtml}</div>
+        <div class="lp-now-footer">
+          <span class="lp-now-count">👥 ${entry.count} pessoa${entry.count !== 1 ? 's' : ''} escalada${entry.count !== 1 ? 's' : ''}</span>
+          <span class="lp-now-phrase" id="lp-phrase-inner">${PHRASES[phraseIdx]}</span>
+        </div>
+      </div>`;
+  }
+
+  /* ── Renderiza coluna PRÓXIMAS ── */
+  function renderNext(nexts) {
+    const el = document.getElementById('lp-next-list');
+    if (!el) return;
+    el.innerHTML = '';
+    const show = nexts.slice(0, 5);
+    if (!show.length) {
+      el.innerHTML = '<div style="font-size:0.58rem;color:var(--azul2);opacity:0.4;padding:12px 8px;text-align:center">Nenhuma próxima escala</div>';
+      return;
+    }
+    show.forEach((e, i) => {
+      const tag = i === 0 ? '→ PRÓXIMA' : '· EM BREVE';
+      const namesHtml = e.allNames.slice(0, 12).map(n => chipHtml(n, true)).join('') +
+        (e.allNames.length > 12 ? `<span class="lp-next-chip">+${e.allNames.length - 12}</span>` : '');
+      el.innerHTML += `
+        <div class="lp-next-item">
+          <div class="lp-next-tag">${tag}</div>
+          <div class="lp-next-time">${e.label}</div>
+          <div class="lp-next-source">${sourceLabel(e.source)}</div>
+          <div class="lp-next-names">${namesHtml}</div>
+          <div class="lp-next-count">${e.count} pessoa${e.count !== 1 ? 's' : ''}</div>
+        </div>`;
+    });
+  }
+
+  /* ── Render principal ── */
+  function render() {
+    const entries = buildEntries();
+    const done  = entries.filter(e => e.status === 'done');
+    const now   = entries.find(e => e.status === 'now') || null;
+    const nexts = entries.filter(e => e.status === 'next');
+
+    renderDone(done);
+    renderNow(now);
+    renderNext(nexts);
+
+    /* Info de última atualização */
+    const info = document.getElementById('lp-refresh-info');
+    if (info) {
+      const t = new Date();
+      info.textContent = 'Atualizado ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
+    }
+  }
+
+  /* ── Relógio ── */
+  function updateClock() {
+    const now = new Date();
+    const hh  = String(now.getHours()).padStart(2,'0');
+    const mm  = String(now.getMinutes()).padStart(2,'0');
+    const ss  = String(now.getSeconds()).padStart(2,'0');
+    const clk = document.getElementById('lp-clock');
+    if (clk) clk.textContent = hh + ':' + mm;
+
+    const DAYS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const ds = document.getElementById('lp-date-str');
+    if (ds) ds.textContent = DAYS[now.getDay()] + ', ' + now.getDate() + ' ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+
+    /* Rerender a cada minuto inteiro */
+    if (ss === '00') {
+      render();
+      phraseIdx = (phraseIdx + 1) % PHRASES.length;
+    }
+  }
+
+  /* ── API pública ── */
+  function open() {
+    document.getElementById('lp-overlay').classList.add('show');
+    render();
+    updateClock();
+    if (tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(updateClock, 1000);
+  }
+
+  function close() {
+    document.getElementById('lp-overlay').classList.remove('show');
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    if (document.fullscreenElement) document.exitFullscreen();
+  }
+
+  function setFilter(type, val, btn) {
+    if (type === 'source') {
+      fSource = val;
+      document.querySelectorAll('#lpf-source .lp-filter-btn').forEach(b => b.classList.remove('active'));
+    } else {
+      fDay = val;
+      document.querySelectorAll('#lpf-day .lp-filter-btn').forEach(b => b.classList.remove('active'));
+    }
+    btn.classList.add('active');
+    render();
+  }
+
+  function toggleFullscreen() {
+    const el = document.getElementById('lp-overlay');
+    if (!document.fullscreenElement) {
+      el.requestFullscreen && el.requestFullscreen();
+    } else {
+      document.exitFullscreen && document.exitFullscreen();
+    }
+  }
+
+  return { open, close, setFilter, toggleFullscreen };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   REMOTE STORAGE (RS)
+   Sincroniza dados com o servidor Node.js via /api/store.
+   Fallback transparente para localStorage quando offline.
+═══════════════════════════════════════════════════════════════ */
+const RS = (() => {
+  const API     = '/api/store';
+  const cache   = {};        /* cópia em memória de todos os dados */
+  let   online  = false;
+
+  function setDot(state) {
+    online = state === 'online';
+    const dot = document.getElementById('conn-dot');
+    if (dot) {
+      dot.classList.toggle('online',  online);
+      dot.classList.toggle('offline', !online);
+      dot.title = online
+        ? 'Conectado ao servidor · dados sincronizados'
+        : 'Modo offline · usando localStorage';
+    }
+  }
+
+  /* Carrega todos os dados do servidor uma vez na inicialização */
+  async function init() {
+    try {
+      const r = await fetch(API, { signal: AbortSignal.timeout(4000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const serverData = await r.json();
+      Object.assign(cache, serverData);
+      setDot('online');
+      console.log('[RS] Servidor conectado. Dados carregados:', Object.keys(serverData).length, 'chave(s)');
+    } catch (e) {
+      setDot('offline');
+      console.warn('[RS] Servidor indisponível — usando localStorage. (' + e.message + ')');
+      /* Preenche cache com localStorage como fallback */
+      [CONFIG.STORAGE_KEY, CONFIG_INTER.STORAGE_KEY, 'rv2026_pool_v2'].forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v) cache[k] = v;
+      });
+    }
+  }
+
+  /* Lê um valor (cache → localStorage) */
+  function get(key) {
+    if (cache[key] !== undefined) return cache[key];
+    return localStorage.getItem(key);
+  }
+
+  /* Grava um valor: localStorage imediato + API assíncrono */
+  function set(key, value) {
+    cache[key] = value;
+    /* localStorage como escrita síncrona de segurança */
+    try { localStorage.setItem(key, value); } catch {}
+    /* sync com servidor — fire and forget */
+    if (online) {
+      fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value })
+      }).catch(() => { setDot('offline'); });
+    }
+  }
+
+  return { init, get, set };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT — aguarda inicialização do RS antes de carregar estados
+═══════════════════════════════════════════════════════════════ */
+RS.init().then(() => {
+  State.load();
+  StateInter.load();
+  PoolState.load();
+  Render.refresh();
+  renderPool();
+  setStatus('Escala carregada. ' + (RS.get(CONFIG.STORAGE_KEY) ? '(Dados restaurados)' : '(Dados padrão)'));
+});
 </script>
 </body>
 </html>
