@@ -1,0 +1,6 @@
+{
+  "type" : "module",
+  "dependecies":{
+    "@neondatabase/serverless" : "^0.10.4"
+  }
+}
