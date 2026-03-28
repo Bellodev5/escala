@@ -1,13 +1,10 @@
-
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL);
-
-async function ensureTable() {
+async function ensureTable(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS kv_store (
-      key       TEXT PRIMARY KEY,
-      value     TEXT NOT NULL,
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
@@ -19,7 +16,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    await ensureTable();
+    const sql = neon(process.env.DATABASE_URL);
+    await ensureTable(sql);
 
     // GET — retorna todos os pares chave/valor
     if (req.method === 'GET') {
